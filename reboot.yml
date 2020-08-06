@@ -1,0 +1,9 @@
+---
+
+- name: Reboot all servers
+  hosts: multi
+  order: sorted
+  tasks:
+
+  - name: reboot instances
+    command: systemctl reboot

@@ -1,0 +1,63 @@
+# /etc/ansible/hosts
+
+[targets]
+primary01 ansible_host=10.0.2.100 ansible_connection=ssh ansible_user=root # Ansible Primary node (ansible_ssh_private_key_file= ...)
+secondary01 ansible_host=10.0.2.101 ansible_connection=ssh ansible_user=root # secondary node
+secondary02 ansible_host=10.0.2.102 ansible_connection=ssh ansible_user=root # secondary
+secondary03 ansible_host=10.0.2.105 ansible_connection=ssh ansible_user=root # secondary03
+
+# All servers
+[multi]
+primary01
+secondary01
+secondary02
+secondary03
+
+# packages for all nodes
+[package]
+multi
+
+# patches for all nodes
+[patch]
+multi
+
+# primary nodes
+[primary]
+primary01
+
+# secondary nodes
+[secondary]
+secondary01
+secondary02
+secondary03
+
+# secondary01 node
+[secondary01]
+secondary01
+
+# secondary02 node
+[secondary02]
+secondary02
+
+# secondary03 node
+[secondary03]
+secondary03
+
+# cluster nodes
+[cluster]
+primary01
+secondary01
+secondary02
+secondary03
+
+# test environment
+[test:children]
+
+# accept environment
+[acceptance:children]
+
+# production environment
+[production:children]
+
+# Ungrouped environment
+[ungrouped]

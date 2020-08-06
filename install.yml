@@ -1,0 +1,39 @@
+---
+
+- name: Packages for all servers
+  hosts: package:!multi
+  gather_facts: false
+
+  tasks:
+
+  - name: disable selinux
+    command: /sbin/setenforce 0
+
+  - name: install EPEL repository
+    command: dnf install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm -y
+
+  - name: enable PowerTools
+    command: dnf config-manager --set-enabled PowerTools -y
+
+  - name: upgrade all packages
+    dnf:
+      name: "*"
+      state: latest
+
+  - name: install the latest versions of chrony, cockpit, cockpit-pcp, htop, nano, nmap, tar, tree, wget
+    dnf:
+      name:
+      - chrony
+      - cockpit
+      - cockpit-pcp
+      - htop
+      - nano
+      - nmap
+      - tar
+      - tree
+      - wget
+      state: latest
+
+  - name: Autoremove unneeded packages installed as dependencies
+    dnf:
+      autoremove: yes
