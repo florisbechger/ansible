@@ -1,0 +1,183 @@
+---
+
+- name: Splunk Playbook
+  hosts: splunkcluster
+  gather_facts: false
+
+  tasks:
+
+  - name: Open port 8000 in Firewall
+    firewalld:
+      port: 8000/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 8065 in Firewall
+    firewalld:
+      port: 8065/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 8080 in Firewall
+    firewalld:
+      port: 8080/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 8088 in Firewall
+    firewalld:
+      port: 8088/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 8089 in Firewall
+    firewalld:
+      port: 8089/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 8181 in Firewall
+    firewalld:
+      port: 8181/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 8191 in Firewall
+    firewalld:
+      port: 8191/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 9887 in Firewall
+    firewalld:
+      port: 9887/tcp
+      permanent: yes
+      state: enabled
+  - name: Open port 9997 in Firewall
+    firewalld:
+      port: 9997/tcp
+      permanent: yes
+      state: enabled
+
+  - name: create splunk group
+    group:
+      name: splunk
+
+  - name: create splunk user
+    user:
+      name: splunk
+      group: splunk
+      home: /opt/splunk
+
+# SPLUNK:
+# wget -O splunk-8.0.2.1-f002026bad55-Linux-x86_64.tgz 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=8.0.2.1&product=splunk&filename=splunk-8.0.2.1-f002026bad55-Linux-x86_64.tgz&wget=true'
+
+# SPLUNKFORWARDER:
+# wget -O splunkforwarder-8.0.2.1-f002026bad55-Linux-x86_64.tgz 'https://www.splunk.com/bin/splunk/DownloadActivityServlet?architecture=x86_64&platform=linux&version=8.0.2.1&product=universalforwarder&filename=splunkforwarder-8.0.2.1-f002026bad55-Linux-x86_64.tgz&wget=true'
+
+  - name: get the Splunk package and copy to /tmp
+    copy:
+      src: /data/nfsshare/splunk-8.0.2.1-f002026bad55-Linux-x86_64.tgz
+      dest: /tmp/
+      remote_src: yes
+      backup: yes
+
+  - name: unpack the Splunk package
+    unarchive:
+      src: /tmp/splunk-8.0.2.1-f002026bad55-Linux-x86_64.tgz
+      dest: /tmp
+      remote_src: yes
+      backup: yes
+
+  - name: delete the tgz package
+    file:
+      path: /tmp/splunk-8.0.2.1-f002026bad55-Linux-x86_64.tgz
+      remote_src: yes
+      state: absent
+
+  - name: copy the splunk directory
+    copy:
+      src: /tmp/splunk/
+      dest: /opt/splunk/
+      remote_src: yes
+      owner: splunk
+
+  - name: delete the /tmp/splunk directory
+    file:
+      path: /tmp/splunk
+      state: absent
+
+  - name: enableSplunkWebSSL to /local/web.conf (1-4)
+    command: cp -rp /opt/splunk/etc/system/default/web.conf /opt/splunk/etc/system/local/web.conf
+  - name: enableSplunkWebSSL to /local/web.conf (2-4)
+    command: echo '' >> /opt/splunk/etc/system/local/web.conf
+  - name: enableSplunkWebSSL to /local/web.conf (3-4)
+    command: echo '[settings]' >> /opt/splunk/etc/system/local/web.conf
+  - name: enableSplunkWebSSL to /local/web.conf (4-4)
+    command: echo 'enableSplunkWebSSL = 1' >> /opt/splunk/etc/system/local/web.conf
+
+  - name: configure /local/workload_pools.conf (2-1)
+    command: cp -rp /opt/splunk/etc/system/default/workload_pools.conf /opt/splunk/etc/system/local/workload_pools.conf
+#  - name: configure /local/workload_pools.conf (2-2)
+#    command: sed -i -e 's/enabled = false/enabled = true/g' /opt/splunk/etc/system/local/workload_pools.conf
+
+  - name: configure /local/outputs.conf
+    command: cp -rp /opt/splunk/etc/system/default/outputs.conf /opt/splunk/etc/system/local/outputs.conf
+
+  - name: configure /local/inputs.conf (1-11)
+    command: cp -rp /opt/splunk/etc/system/default/inputs.conf /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (2-11)
+    command: echo '' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (3-11)
+    command: echo '[default]' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (4-11)
+    command: echo 'disabled = false' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (5-11)
+    command: echo 'connection_host = 10.0.2.100' >> /opt/splunk/etc/system/local/inputs.conf # CHANGE to HOST (e.g. 10.0.2.101, 10.0.2.102, 10.0.2.105)
+  - name: configure /local/inputs.conf (6-11)
+    command: echo 'listenOnIPv6 = no' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (7-11)
+    command: echo 'acceptFrom = 10.0.2.0/24' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (8-11)
+    command: echo '[tcp:9997]' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (9-11)
+    command: echo '[splunktcp://9997]' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (10-11)
+    command: echo 'index = ' >> /opt/splunk/etc/system/local/inputs.conf
+  - name: configure /local/inputs.conf (11-11)
+    command: echo 'queue = indexQueue # parsingQueue (is the default value to apply in the props.conf file)' >> /opt/splunk/etc/system/local/inputs.conf
+
+  - name: set permissions on /opt/splunk directory
+    file:
+      dest: /opt/splunk
+      state: directory
+      owner: splunk
+      group: splunk
+      recurse: yes
+
+#  - - - - - - - -  - - - - - -  - - - - - -  - - - -  - - -  - - - -  -
+
+# NOT TESTED:
+
+#  - - - - - - - -  - - - - - -  - - - - - -  - - - -  - - -  - - - -  -
+
+# pause until you can verify updates to an application were successful
+  - pause:
+  
+# exit to root:
+  - name: exit to root
+    command: exit
+    remote_user: root
+
+# add monitor on /var/log:
+  - name: add monitor on /var/log
+    command: ./opt/splunk/bin/splunk add monitor /var/log # Splunk username: admin/password
+
+# configure Splunk systemd:
+  - name: stop Splunk
+    command: ./opt/splunk/bin/splunk stop
+  - name: Splunk disable boot-start
+    command: ./opt/splunk/bin/splunk disable boot-start
+  - name: Splunk enable systemd
+    command: ./opt/splunk/bin/splunk enable boot-start -systemd-managed 1 -user splunk
+
+  - name: daemon-reload
+    command: systemctl daemon-reload
+  - name: enable Splunkd
+    command: systemctl enable Splunkd
+
+  - name: stop Splunk
+    command: systemctl stop Splunkd
