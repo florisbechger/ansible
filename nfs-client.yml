@@ -1,0 +1,43 @@
+---
+
+- name: NFS client configuration
+  hosts: multi:!ansible # all except ansible
+  gather_facts: false
+
+  tasks:
+
+  - name: make directory /data/nfsshare
+    file:
+      path: /data/nfsshare
+      state: directory
+
+  - name: Open service nfs in Firewall
+    firewalld:
+      service: nfs
+      source: 10.0.2.0/24
+      permanent: yes
+      state: enabled
+
+  - name: install the latest version of nfs-utils
+    dnf:
+      name: nfs-utils
+      state: latest
+
+  - name: enable nfs-utils
+    command: systemctl enable --now nfs-server
+  - name: enable rpcbind
+    command: systemctl enable --now rpcbind
+
+  - name: configure /etc/hosts
+    command: echo '10.0.2.95 nfs-server' >> /etc/hosts
+
+  - name: configure /etc/fstab
+    command: echo 'nfs-server:/data/nfs  /data/nfsshare   nfs defaults   0 0' >> /etc/fstab
+
+  - name: mount
+    command: mount -t nfs -o nfsvers=4 nfs-server:/data/nfs  /data/nfsshare
+
+  - name: restart nfs-utils
+    command: systemctl restart nfs-server
+  - name: enable rpcbind
+    command: systemctl restart rpcbind
