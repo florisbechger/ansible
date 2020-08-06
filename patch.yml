@@ -1,0 +1,68 @@
+---
+
+- name: Patches for all servers
+  hosts: patch:!multi
+  gather_facts: false
+
+  tasks:
+
+  - name: Open cockpit in Firewall # port 9000
+    firewalld:
+      service: cockpit
+      permanent: yes
+      state: enabled
+  - name: Open dns in Firewall
+    firewalld:
+      service: dns
+      permanent: yes
+      state: enabled
+  - name: Open ntp in Firewall # port 123
+    firewalld:
+      service: ntp
+      permanent: yes
+      state: enabled
+  - name: Open ssh in Firewall # port 22
+    firewalld:
+      service: ssh
+      permanent: yes
+      state: enabled
+  - name: Open ptp in Firewall # port 319, 320, 323
+    firewalld:
+      service: ptp
+      permanent: yes
+      state: enabled
+
+  - name: replace ntp server
+    replace:
+      path: /etc/chrony.conf
+      regexp: '[0|1|2|3].centos.pool.ntp.org'
+      replace: 'nl.pool.ntp.org'
+      backup: yes
+
+  - name: configure chrony.conf
+    command: echo '' >> /etc/chrony.conf
+  - name: Serve time even if not synchronized to time source
+    command: echo '# Serve time even if not synchronized to time source' >> /etc/chrony.conf
+  - name: local stratum 8
+    command: echo 'local stratum 8' >> /etc/chrony.conf
+  - name: configure chrony.conf
+    command: echo '' >> /etc/chrony.conf
+  - name: Allow NTP client access from local network
+    command: echo '# Allow NTP client access from local network' >> /etc/chrony.conf
+  - name: allow 10.0.2.0/24
+    command: echo '# allow 10.0.2.0/24' >> /etc/chrony.conf
+
+  - name: enable chrony
+    command: systemctl enable chronyd
+  - name: start chrony
+    command: systemctl start chronyd
+
+  - name: set timezone to Europe/Amsterdam
+    command: timedatectl set-timezone Europe/Amsterdam
+  - name: set hardware clock
+    command: hwclock -w
+
+  - name: enable cockpit
+    command: systemctl enable --now cockpit.socket
+  - name: start cockpit
+    command: systemctl start --now cockpit.socket
