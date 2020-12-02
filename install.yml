@@ -20,16 +20,18 @@
       name: "*"
       state: latest
 
-  - name: install the latest versions of chrony, cockpit, cockpit-pcp, htop, nano, nmap, tar, tree, wget
+  - name: install the latest versions of chrony, cockpit, flatpak, htop, nano, neofetch, nmap, tar, toolbox, tree, wget
     dnf:
       name:
       - chrony
       - cockpit
-      - cockpit-pcp
+      - flatpak
       - htop
       - nano
+      - neofetch
       - nmap
       - tar
+      - toolbox
       - tree
       - wget
       state: latest
