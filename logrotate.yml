@@ -1,0 +1,29 @@
+
+---
+
+- name: Backup logrotate settings
+  command: cp /etc/logrotate.conf /etc/logrotate.bak
+
+- name: Remove logrotate settings
+  command: rm -f /etc/logrotate.conf
+
+- name: Create logrotate settings
+  command: touch /etc/logrotate.conf
+
+- name: Logrotate settings
+  ansible.builtin.blockinfile:
+    path: /etc/logrotate.conf
+    marker: ''
+    block: |
+      # see "man logrotate" for details
+      # global options do not affect preceding include directives
+      # rotate log files daily
+      daily
+      # keep 31 days worth of backlogs
+      rotate 31
+      # create new (empty) log files after rotating old ones
+      create
+      # packages drop log rotation information into this directory
+      include /etc/logrotate.d
+      # system-specific logs may also be configured here.
+

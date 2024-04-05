@@ -1,0 +1,11 @@
+
+## Change settings to your specification
+
+[targets]
+debian ansible_host=192.168.0.1
+
+[hosts]
+debian
+
+
+

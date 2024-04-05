@@ -1,0 +1,72 @@
+
+## Provisioning Debian on hardware (NUC)
+## Provision as root
+
+# 1. Install ansible-core on a Controller node (laptop)
+
+# 2. Install Debian network edition on hardware (NUC)
+
+  - root: root/passwd
+  - user: floris/passwd
+  - 2 partitions: EFI (512MB) & XFS (/), no SWAP
+  - Barebones: Only SSH server
+
+# 3. Login the fresh installed hardware (NUC)
+  echo "" >> /etc/ssh/sshd_config
+  echo "# CHANGES" >> /etc/ssh/sshd_config
+  echo "Port 22" >> /etc/ssh/sshd_config
+  echo "PermitRootLogin yes" >> /etc/ssh/sshd_config
+  echo "PubkeyAuthentication yes" >> /etc/ssh/sshd_config
+  echo "HostbasedAuthentication yes" >> /etc/ssh/sshd_config
+
+  systemctl restart sshd
+  ip a # Find address (example: 192.168.0.44/24)
+
+# 4. Install net-tools
+  apt install net-tools
+  ifconfig enp86s0 up
+  ifconfig wlo1 up
+
+  # cp /etc/network/interfaces /etc/network/interfaces.bak
+
+  # echo "" >> /etc/network/interfaces
+  # echo "# The primary network interface" >> /etc/network/interfaces
+  # echo "allow-hotplug enp86s0" >> /etc/network/interfaces
+  # echo "auto enp86s0" >> /etc/network/interfaces
+  # echo "iface enp86s0 inet static" >> /etc/network/interfaces
+  # echo "address 192.168.0.25" >> /etc/network/interfaces
+  # echo "netmask 255.255.255.0" >> /etc/network/interfaces
+  # echo "gateway 192.168.0.1" >> /etc/network/interfaces
+
+  systemctl restart networking.service
+
+# 5. Generate keys on Controller node (Laptop) as root
+  ssh-keygen -f .ssh/id_rsa
+
+# 6. Copy public key to NUC
+  ssh-copy-id root@192.168.0.86
+
+# 7. Test keyless entries, try login
+  ssh root@192.168.0.86
+
+# 8. Copy NUC's ip address to hosts file
+
+  [targets]
+  debian ansible_host=192.168.0.86 # example
+
+  [hosts]
+  debian
+
+# 9. Configure paths in ansible.cfg
+
+  inventory = /home/ansible/nuc # example
+  hosts_path = /home/ansible/nuc # example
+  vars_path = /home/ansible/nuc # example
+  # log_path = /home/ansible/nuc/logs # example
+  # roles_path = /home/ansible/nuc/roles # example
+
+# 10. Edit vars.yml with your specifications
+
+# 11. Run playbook
+  ansible-playbook nuc.yml
+

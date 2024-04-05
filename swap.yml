@@ -1,0 +1,63 @@
+
+## Change settings to your specification
+
+---
+
+# Configure a swapfile instead of a swap partition (recommended for ssd-drives)
+
+# Disable swap
+
+- name: Check if swapfile exists
+  stat: 
+    name: /swapfile
+  register: swapfile_exists
+- name: Disable swapfile
+  command: swapoff --all
+  when: swapfile_exists.stat.exists == True
+- name: Remove swapfile (if exist)
+  command: rm /swapfile
+  when: swapfile_exists.stat.exists == True
+- name: Delete entry in fstab
+  command: sed -i '/swap/d' /etc/fstab
+- name: Update grub (apply changes)
+  command: update-grub
+- name: Update initramfs (apply changes)
+  command: update-initramfs -u
+
+# Update swapfile:
+
+- name: Configure swapfile
+  command: fallocate -l {{ swap }} /swapfile
+- name: Zero swapfile
+  command: dd if=/dev/zero of=/swapfile bs=1024 count={{ count }}
+- name: Root only swapfile
+  command: chmod 600 /swapfile
+- name: Make swapfile
+  command: mkswap /swapfile
+- name: Enable swapfile
+  command: swapon /swapfile
+
+- name: Make swapfile persistent
+  ansible.builtin.lineinfile:
+    path: /etc/fstab
+    line: /swapfile    swap    swap    defaults    0    0
+    create: yes
+    state: present
+
+# A swappiness setting of zero means that the disk will be avoided unless absolutely necessary Default setting is 60, so change this to a much lower number
+
+- name: Swappiness setting
+  command: sysctl vm.swappiness={{ swappiness }}
+
+- name: Make swappiness setting persistent
+  ansible.builtin.lineinfile:
+    path: /etc/sysctl.conf
+    line: vm.swappiness={{ swappiness }}
+    create: yes
+    state: present
+
+- name: Update grub (apply changes)
+  command: update-grub
+- name: Update initramfs (apply changes)
+  command: update-initramfs -u
+

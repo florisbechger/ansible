@@ -1,0 +1,17 @@
+
+---
+
+- name: Install Cockpit packages
+  ansible.builtin.apt:
+    name:
+    - cockpit
+    - cockpit-bridge
+    - cockpit-machines
+    - cockpit-networkmanager
+    - cockpit-podman
+    - cockpit-pcp
+    - cockpit-storaged
+    state: latest
+    update_cache: yes
+    install_recommends: no
+

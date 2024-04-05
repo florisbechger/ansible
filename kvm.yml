@@ -1,0 +1,93 @@
+
+---
+
+- name: Check if Host supports Virtualization
+  command: virt-host-validate qemu
+  register: command_result
+  failed_when:
+    - "'FAIL' in command_result.stderr"
+
+- name: Install KVM packages
+  ansible.builtin.apt:
+    name:
+    - qemu-kvm
+    - libnss-libvirt
+    - libvirt-daemon-system
+    - libvirt-clients
+    - libguestfs-tools
+    - virtinst
+    state: latest
+    update_cache: yes
+    install_recommends: no
+
+- name: Replace line in file /etc/nsswitch.conf
+  ansible.builtin.lineinfile:
+    path: /etc/nsswitch.conf
+    search_string: 'hosts:          files mdns4_minimal [NOTFOUND=return] dns myhostname mymachines'
+    line: 'hosts:          files libvirt libvirt_guest dns mymachines'
+
+# User
+
+- name: Set libvirt user {{ username }}
+  command: usermod -aG libvirt {{ username }}
+- name: Set kvm user {{ username }}
+  command: usermod -aG kvm {{ username }}
+
+# Network
+
+- name: Backup Default networking settings
+  command: cp /etc/libvirt/qemu/networks/default.xml /etc/libvirt/qemu/networks/default.bak
+- name: Remove Default networking settings
+  command: rm /etc/libvirt/qemu/networks/default.xml
+- name: Create new Default networking settings
+  command: touch /etc/libvirt/qemu/networks/default.xml
+- name: Setup Bridged networking
+  ansible.builtin.blockinfile:
+    path: /etc/libvirt/qemu/networks/default.xml
+    marker: ''
+    block: |
+      <network ipv6='no' trustGuestRxFilters='no'>
+        <name>default</name>
+        <forward mode='bridge'/>
+        <bridge name='br0'/>
+      </network>
+
+# Storage
+
+- name: Create Default images storage directory
+  command: mkdir -p /data/images
+- name: Create Default iso storage directory
+  command: mkdir -p /data/iso
+- name: Download Debian iso into data/iso
+  command: wget https://cdimage.debian.org/debian-cd/current/amd64/iso-cd/debian-12.5.0-amd64-netinst.iso /data/iso
+- name: Create Default storage configuration directory
+  command: mkdir -p /etc/libvirt/storage
+- name: Remove Default storage configuration file
+  command: rm -f /etc/libvirt/storage/default.xml
+- name: Create NEW Default storage configuration file
+  command: touch /etc/libvirt/storage/default.xml
+- name: Setup Default storage
+  ansible.builtin.blockinfile:
+    path: /etc/libvirt/storage/default.xml
+    marker: ''
+    block: |
+      <pool type='dir'>
+        <name>default</name>
+        <capacity unit='bytes'>0</capacity>
+        <allocation unit='bytes'>0</allocation>
+        <available unit='bytes'>0</available>
+        <source>
+        </source>
+        <target>
+          <path>/data/images</path>
+        </target>
+      </pool>
+
+- name: Restart Libvirtd
+  command: systemctl restart libvirtd
+
+- name: Autostart default network
+  command: virsh net-autostart default
+- name: Autostart default pool
+  command: virsh pool-autostart default
+

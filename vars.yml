@@ -1,0 +1,37 @@
+
+## Change settings to your specification
+
+---
+
+# Main user
+username: dummy
+
+# NUC settings for NUC
+nic: enp86s0 # enp1s0 for a virtual machine
+wifi: wlo1
+swap: 16G
+count: 16777216 # 2097152 = 2GB; 4194304 = 4GB; 8388608 = 8GB; 16777216 = 16GB; 33554432 = 32GB; 67108864 = 64GB
+swappiness: 20
+
+# Network Wifi settings
+ssid: wifi
+password: password
+
+# Hostname settings
+hostname: debian
+network: 192.168.0.0/24
+address: 192.168.0.25
+gateway: 192.168.0.1
+bridge: virbr0
+
+nameserver:
+  - nameserver 192.168.0.1 # test- or customer DNS address
+  - nameserver 1.1.1.1 # Cloudflare DNS
+  - nameserver 1.0.0.1 # Cloudflare DNS
+
+# Whitelist Firewall (iptables.yml)
+home: 192.168.0.0/24 # Home
+#ras: 123.123.123.1/32 # BMS RAS server address
+#office: 123.123.123.2/32 # BMS Amersfoort address
+#chckmk: 123.123.123.3/32 # BMS CheckMK server address
+#director: 123.123.123.4/32 # BMS Nakivo server address

@@ -1,0 +1,23 @@
+
+# chronyc tracking
+# chronyc sources
+# chronyc sourcestats
+
+---
+
+- name: Set timezone to Europe/Amsterdam
+  command: timedatectl set-timezone Europe/Amsterdam
+
+- name: Set hardware clock
+  command: hwclock -w
+
+#- name: Insert/Updatec Local NTP servers
+#  ansible.builtin.blockinfile:
+#    path: /etc/chrony/chrony.conf
+#    marker: ''
+#    block: |
+#      # Local ntp sources:
+#      server 0.nl.pool.ntp.org iburst maxsources 3 maxpoll 10
+#      server 1.nl.pool.ntp.org iburst maxsources 3 maxpoll 10
+#      server 2.nl.pool.ntp.org iburst maxsources 3 maxpoll 10
+#      server 3.nl.pool.ntp.org iburst maxsources 3 maxpoll 10

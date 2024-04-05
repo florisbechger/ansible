@@ -1,0 +1,139 @@
+
+---
+
+# Install iptables & iptables-persistent
+- name: Install iptables
+  ansible.builtin.apt:
+    name: iptables
+    state: latest
+    update_cache: yes
+    install_recommends: no
+- name: Install iptables-persistent
+  ansible.builtin.apt:
+    name: iptables-persistent
+    state: latest
+    update_cache: yes
+    install_recommends: no
+- name: Stop iptables
+  command: systemctl stop netfilter-persistent.service
+- name: Start and enable iptables
+  command: systemctl enable netfilter-persistent.service --now
+- name: Save original rules
+  command: sh -c "iptables-save > /etc/iptables/iptables.rules"
+
+# Delete all Rules
+- name: Delete all current rules
+  command: iptables --flush
+- name: Zero all rules
+  command: iptables --zero
+
+# Delete all CHAINS (This may fail on first run)
+- name: Delete CHAIN Network
+  command: iptables -X Network
+- name: Delete CHAIN CheckMK
+  command: iptables -X CheckMK
+- name: Delete CHAIN Nakivo
+  command: iptables -X Nakivo
+- name: Delete CHAIN Cockpit
+  command: iptables -X Cockpit
+- name: Delete CHAIN Zorro
+  command: iptables -X Zorro
+
+# Define CHAINS
+- name: CHAIN Network
+  command: iptables -N Network
+- name: CHAIN Cockpit
+  command: iptables -N Cockpit
+#- name: CHAIN CheckMK
+#  command: iptables -N CheckMK
+#- name: CHAIN Nakivo
+#  command: iptables -N Nakivo
+- name: CHAIN Zorro
+  command: iptables -N Zorro
+
+# Goto Whitelist
+- name: JUMP to CHAIN Network
+  command: iptables -t filter -A INPUT -j Network
+
+# RETURN
+
+# Enable Ping request
+- name: Enable Ping request
+  command: iptables -A INPUT -p icmp --icmp-type echo-request -j ACCEPT
+- name: Enable Ping request
+  command: iptables -A OUTPUT -p icmp --icmp-type echo-request -j ACCEPT
+
+# Allow inbound from established connections
+- name: Allow inbound from established connections
+  command: iptables -A INPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+- name: Allow inbound from established connections
+  command: iptables -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Allow all Loopback (lo) and reject to localhost that does not originate from lo
+- name: Allow all Loopback (lo) and reject to localhost that does not originate from lo
+  command: iptables -A INPUT -i lo -j ACCEPT
+- name: Allow all Loopback (lo) and reject to localhost that does not originate from lo
+  command: iptables -A INPUT ! -i lo -s 127.0.0.0/8 -j REJECT
+- name: Allow all Loopback (lo) and reject to localhost that does not originate from lo
+  command: iptables -A OUTPUT -o lo -j ACCEPT
+
+# Allow DNS Requests
+- name: Allow DNS Requests
+  command: iptables -A INPUT -p udp --dport 53 -j ACCEPT
+
+# Drop all other inbound
+- name: Drop all other inbounds
+  command: iptables -A INPUT -j DROP
+- name:  Drop all other forwards
+  command: iptables -A FORWARD -j DROP
+
+# Whitelist Network
+- name: CHAIN Network {{ network }}:22
+  command: iptables -A Network -p tcp --dport 22 -m state --state NEW -s {{ network }} -j ACCEPT
+#- name: CHAIN Network {{ ras }}:22
+#  command: iptables -A Network -p tcp --dport 22 -m state --state NEW -s {{ ras }} -j ACCEPT
+#- name: CHAIN Network {{ office }}:22
+#  command: iptables -A Network -p tcp --dport 22 -m state --state NEW -s {{ office }} -j ACCEPT
+- name: JUMP to CHAIN CheckMK
+  command: iptables -t filter -A Network -j Cockpit
+
+# Whitelist Cockpit
+- name: CHAIN Cockpit {{ network }}:9090
+  command: iptables -A Cockpit -p tcp --dport 9090 -m state --state NEW -s {{ network }} -j ACCEPT
+#- name: CHAIN Cockpit {{ ras }}:9090
+#  command: iptables -A Cockpit -p tcp --dport 9090 -m state --state NEW -s {{ ras }} -j ACCEPT
+#- name: CHAIN Cockpit {{ office }}:9090
+#  command: iptables -A Cockpit -p tcp --dport 9090 -m state --state NEW -s {{ office }} -j ACCEPT
+- name: JUMP to CHAIN Zorro
+  command: iptables -t filter -A Cockpit -j Zorro
+
+# Whitelist CheckMK
+#- name: CHAIN CheckMK {{ chckmk }}:6556
+#  command: iptables -A CheckMK -p tcp --dport 6556 -m state --state NEW -s {{ chckmk }} -j ACCEPT
+#- name: JUMP to CHAIN Nakivo
+#  command: iptables -t filter -A CheckMK -j Nakivo
+
+# Whitelist Nakivo
+#- name: CHAIN Nakivo {{ network }}:9446
+#  command: iptables -A Nakivo -p tcp --dport 9446 -m state --state NEW -s {{ network }} -j ACCEPT
+#- name: CHAIN Nakivo {{ network }}:9448-10000
+#  command: iptables -A Nakivo -p tcp --match multiport --dports 9448:10000 -m state --state NEW -s {{ network }} -j ACCEPT
+#- name: CHAIN Nakivo {{ director }}:9446
+#  command: iptables -A Nakivo -p tcp --dport 9446 -m state --state NEW -s {{ director }} -j ACCEPT
+#- name: CHAIN Nakivo {{ director }}:9448-10000
+#  command: iptables -A Nakivo -p tcp --match multiport --dports 9448:10000 -m state --state NEW -s {{ director }} -j ACCEPT
+#- name: JUMP to CHAIN Cockpit
+#  command: iptables -t filter -A Nakivo -j Zorro
+
+# Goto RETURN
+- name: CHAIN Zorro
+  command: iptables -A Zorro -j RETURN
+
+# Save and restart iptables
+- name: Save to persistent rules # saved in /etc/iptables/rules.v4
+  command: netfilter-persistent save
+#- name: Apply to persistent rules
+#  command: iptables-apply /etc/iptables/rules.v4
+- name: Restart iptables
+  command: systemctl restart netfilter-persistent.service
+

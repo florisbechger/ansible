@@ -1,0 +1,31 @@
+
+---
+
+- name: Install sudo if not exists
+  command: apt install sudo -y
+
+- name: Add user {{ username }} to sudoers and generate key
+  ansible.builtin.user:
+    name: "{{ username }}"
+    password: $2y$10$trNrpSGgxEgDxd.AsieRve9lz7jQ2U4GEYjxxozGC7G5c3aHPWAjO
+    create_home: true
+    groups: audio, backup, cdrom, disk, kvm, libvirt, wheel, video
+    generate_ssh_key: yes
+    ssh_key_bits: 2048
+    ssh_key_file: .ssh/key_rsa
+
+- name: Add user to sudoers
+  command: usermod -aG sudo {{ username }}
+
+#- name: Remove Temporary key for root
+#  command: rm -f /root/.ssh/authorized_keys
+
+#- name: Disable root login on SSH
+#  ansible.builtin.lineinfile:
+#    path: /etc/ssh/sshd_config
+#    search_string: 'PermitRootLogin yes'
+#    line: ''
+
+- name: Restart SSH service
+  command: systemctl restart sshd
+

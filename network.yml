@@ -1,0 +1,98 @@
+
+---
+
+- name: Remove hostfile
+  command: rm -f /etc/hostname
+
+- name: Recreate hostfile
+  command: touch /etc/hosts
+
+- name: Change hostname to {{ hostname }}
+  command: hostnamectl hostname {{ hostname }}
+
+- name: Add {{ hostname }} and {{ address }} to hostfile
+  ansible.builtin.blockinfile:
+    path: /etc/hosts
+    marker: ''
+    block: |
+      127.0.0.1    localhost
+      127.0.1.1    {{ hostname }}
+      {{ address }}    {{ hostname }}
+
+- name: Install Bridge packages
+  ansible.builtin.apt:
+    name:
+    - bridge-utils
+    - dnsmasq
+    state: latest
+    update_cache: yes
+    install_recommends: no
+
+- name: Backup Network settings
+  command: cp /etc/network/interfaces /etc/network/interfaces.bak
+
+#- name: Remove Network settings
+#  command: rm -f /etc/network/interfaces
+
+#- name: Refresh Network settings
+#  command: touch /etc/network/interfaces
+
+#- name: Setup Bridged networking
+#  ansible.builtin.blockinfile:
+#    path: /etc/network/interfaces
+#    marker: ''
+#    block: |
+#      source /etc/network/interfaces.d/*
+
+#      # The loopback network interface
+#      auto lo
+#      iface lo inet loopback
+
+#      # Select the primary wifi interface
+#      allow-hotplug {{ wifi }}
+#      iface {{ wifi }} inet dhcp
+#        wpa-ssid {{ ssid }}
+#        wpa-psk  {{ password }}
+
+#      # Select the primary bridge interface
+#      allow-hotplug {{ bridge }}
+#      auto {{ bridge }}
+#      iface {{ bridge }} inet static
+#        bridge-ports {{ nic }}
+#          address {{ address }}/24
+#          netmask 255.255.255.0
+#          gateway {{ gateway }}
+
+- name: Backup DNS settings
+  command: cp /etc/resolv.conf /etc/resolv.bak
+
+- name: Remove DNS settings
+  command: rm -f /etc/resolv.conf
+
+- name: Refresh DNS settings
+  command: touch /etc/resolv.conf
+
+- name: Add DNS settings
+  ansible.builtin.blockinfile:
+    path: /etc/resolv.conf
+    marker: ''
+    block: |
+      {{ nameserver[0] }}
+      {{ nameserver[1] }}
+      {{ nameserver[2] }}
+
+- name: Disable IPv6
+  ansible.builtin.blockinfile:
+    path: /etc/sysctl.conf
+    marker: ''
+    block: |
+      # Disabling the IPv6
+      net.ipv6.conf.all.disable_ipv6 = 1
+      net.ipv6.conf.default.disable_ipv6 = 1
+      net.ipv6.conf.lo.disable_ipv6 = 1
+
+- name: Apply the Changes
+  command: update-initramfs -u
+
+#- name: Restart network connections
+#  command: systemctl restart networking.service
